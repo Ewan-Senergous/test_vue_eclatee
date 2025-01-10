@@ -3,13 +3,11 @@ export async function attachClickListenerToImage(imageSelector: string): Promise
 	if (image) {
 		image.addEventListener('click', async (e: MouseEvent) => {
 			const rect = image.getBoundingClientRect();
-			const x = Math.round(e.clientX - rect.left); // Coordonnée X relative à l'image
-			const y = Math.round(e.clientY - rect.top); // Coordonnée Y relative à l'image
+			const x = Math.round(e.clientX - rect.left);
+			const y = Math.round(e.clientY - rect.top);
 
-			// Afficher dans la console du navigateur pour vérification
 			console.log(`x: ${x}, y: ${y}`);
 
-			// Envoyer les coordonnées à l'API interne
 			await fetch('/api/log-coordinates', {
 				method: 'POST',
 				headers: {

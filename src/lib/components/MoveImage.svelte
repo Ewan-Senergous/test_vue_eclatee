@@ -1,86 +1,121 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import type { Part } from '$lib/data/partsData';
 
-	export let partsData: Part[]; // Les données des pièces annotées
+	export let partsData: Part[];
 
-	let imageContainer: HTMLElement | null = null;
-	let offsetX = 0;
-	let offsetY = 0;
+	let container: HTMLElement;
+	let imageX = 0;
+	let imageY = 0;
+	let scale = 1;
+	const zoomStep = 0.5;
+	const minScale = 0.5;
+	const maxScale = 4;
 	let isDragging = false;
 	let startX = 0;
 	let startY = 0;
-	let scale = 1; // Niveau de zoom
-	let zoomStep = 0.5;
-	let minScale = 0.5;
-	let maxScale = 3;
+	let lastX = 0;
+	let lastY = 0;
 
-	// Gestion du début de glissement
 	const handleDragStart = (e: MouseEvent) => {
 		isDragging = true;
-		startX = e.clientX - offsetX;
-		startY = e.clientY - offsetY;
+		startX = e.clientX - lastX;
+		startY = e.clientY - lastY;
 	};
 
-	// Gestion du mouvement de glissement
 	const handleDragMove = (e: MouseEvent) => {
 		if (isDragging) {
-			offsetX = e.clientX - startX;
-			offsetY = e.clientY - startY;
+			lastX = e.clientX - startX;
+			lastY = e.clientY - startY;
+			imageX = lastX;
+			imageY = lastY;
 		}
 	};
 
-	// Fin du glissement
 	const handleDragEnd = () => {
 		isDragging = false;
 	};
 
-	// Gestion du zoom (molette)
 	const handleWheelZoom = (e: WheelEvent) => {
 		e.preventDefault();
+
+		const rect = container.getBoundingClientRect();
+		const mouseX = e.clientX - rect.left;
+		const mouseY = e.clientY - rect.top;
+
 		const zoomDirection = e.deltaY < 0 ? 1 : -1;
+		const prevScale = scale;
 		scale = Math.min(Math.max(scale + zoomStep * zoomDirection, minScale), maxScale);
+
+		const scaleRatio = scale / prevScale;
+		const newX = mouseX - (mouseX - imageX) * scaleRatio;
+		const newY = mouseY - (mouseY - imageY) * scaleRatio;
+
+		imageX = newX;
+		imageY = newY;
+		lastX = newX;
+		lastY = newY;
 	};
 
-	// Gestion du zoom avec les boutons
 	const zoomIn = () => {
+		const prevScale = scale;
 		scale = Math.min(scale + zoomStep, maxScale);
+
+		const scaleRatio = scale / prevScale;
+		const centerX = container.clientWidth / 2;
+		const centerY = container.clientHeight / 2;
+
+		imageX = centerX - (centerX - imageX) * scaleRatio;
+		imageY = centerY - (centerY - imageY) * scaleRatio;
+		lastX = imageX;
+		lastY = imageY;
 	};
 
 	const zoomOut = () => {
+		const prevScale = scale;
 		scale = Math.max(scale - zoomStep, minScale);
+
+		const scaleRatio = scale / prevScale;
+		const centerX = container.clientWidth / 2;
+		const centerY = container.clientHeight / 2;
+
+		imageX = centerX - (centerX - imageX) * scaleRatio;
+		imageY = centerY - (centerY - imageY) * scaleRatio;
+		lastX = imageX;
+		lastY = imageY;
 	};
 </script>
 
 <div
-	bind:this={imageContainer}
-	class="image-container relative h-full w-full overflow-hidden"
+	bind:this={container}
+	class="relative h-[calc(100vh-8rem)] w-full overflow-hidden"
 	role="button"
 	tabindex="0"
-	aria-label="Image de vue éclatée interactive"
+	aria-label="Vue éclatée interactive"
 	on:mousedown={handleDragStart}
 	on:mousemove={handleDragMove}
 	on:mouseup={handleDragEnd}
 	on:mouseleave={handleDragEnd}
 	on:wheel={handleWheelZoom}
-	style="transform: translate({offsetX}px, {offsetY}px) scale({scale}); transform-origin: center;"
 >
-	<img src="/exploded_view_1.png" alt="Vue éclatée" class="block" draggable="false" />
+	<div
+		class="absolute"
+		style="transform: translate({imageX}px, {imageY}px) scale({scale}); transform-origin: 0 0;"
+	>
+		<img src="/exploded_view_1.png" alt="Vue éclatée" class="block select-none" draggable="false" />
 
-	<!-- Rectangles entourant les numéros -->
-	{#each partsData as part}
-		<div
-			class="absolute"
-			style="top: {part.y}px; left: {part.x}px; width: 60px; height: 30px; transform: translate(-50%, -50%);"
-		>
-			<div class="h-full w-full rounded border-4 border-blue-500 opacity-40"></div>
-		</div>
-	{/each}
+		{#each partsData as part}
+			<div
+				class="absolute"
+				style="top: {part.y}px; left: {part.x}px; width: 60px; height: 30px; transform: translate(-50%, -50%);"
+			>
+				<div class="h-full w-full rounded border-4 border-blue-500 opacity-40"></div>
+			</div>
+		{/each}
+	</div>
 </div>
 
-<!-- Boutons de zoom -->
 <div
-	class="absolute bottom-4 left-1/2 flex -translate-x-1/2 transform items-center gap-4 rounded-lg bg-gray-700 bg-opacity-80 p-2 text-white"
+	class="fixed bottom-4 left-1/2 flex -translate-x-1/2 transform items-center gap-4 rounded-lg bg-gray-700 bg-opacity-80 p-2 text-white"
 >
 	<button class="rounded bg-gray-600 p-2 hover:bg-gray-500" on:click={zoomOut}> - </button>
 	<span class="text-sm">{Math.round(scale * 100)}%</span>
@@ -88,10 +123,10 @@
 </div>
 
 <style>
-	.image-container {
+	img {
 		cursor: grab;
 	}
-	.image-container:active {
+	img:active {
 		cursor: grabbing;
 	}
 </style>
