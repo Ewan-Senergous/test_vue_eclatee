@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Part } from '$lib/data/partsData';
+	import { Tooltip } from 'flowbite-svelte';
 
 	export let partsData: Part[];
 
@@ -105,10 +106,18 @@
 
 		{#each partsData as part}
 			<div
-				class="absolute"
+				class="group absolute"
 				style="top: {part.y}px; left: {part.x}px; width: 60px; height: 30px; transform: translate(-50%, -50%);"
 			>
 				<div class="h-full w-full rounded border-4 border-blue-500 opacity-40"></div>
+				<!-- Tooltip -->
+				<div
+					class="absolute bottom-full left-1/2 mb-2 hidden w-max -translate-x-1/2 transform whitespace-nowrap rounded bg-black px-2 py-1 text-xs text-white shadow-lg group-hover:block"
+				>
+					<strong>{part.name}</strong>
+					<br />
+					Code Fournisseur : <strong>{part.supplierCode}</strong>
+				</div>
 			</div>
 		{/each}
 	</div>

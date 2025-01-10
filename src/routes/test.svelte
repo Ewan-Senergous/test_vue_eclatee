@@ -1,107 +1,127 @@
 <script lang="ts">
 	import type { Part } from '$lib/data/partsData';
 
-	export let partsData: Part[]; // Les données des pièces annotées
+	export let partsData: Part[];
 
-	let imageX = 0; // Position horizontale absolue de l'image
-	let imageY = 0; // Position verticale absolue de l'image
-	let scale = 1; // Niveau de zoom
-	const zoomStep = 0.5; // Pas de zoom
-	const minScale = 0.5; // Zoom minimal
-	const maxScale = 4; // Zoom maximal
-	let isDragging = false; // Indique si l'image est en cours de glissement
-	let dragStartX = 0; // Position initiale de la souris (x) pour le drag
-	let dragStartY = 0; // Position initiale de la souris (y) pour le drag
-	let imageStartX = 0; // Position initiale de l'image pour le drag
-	let imageStartY = 0; // Position initiale de l'image pour le drag
+	let container: HTMLElement;
+	let imageX = 0;
+	let imageY = 0;
+	let scale = 1;
+	const zoomStep = 0.5;
+	const minScale = 0.5;
+	const maxScale = 4;
+	let isDragging = false;
+	let startX = 0;
+	let startY = 0;
+	let lastX = 0;
+	let lastY = 0;
 
-	// Début du glissement (drag)
 	const handleDragStart = (e: MouseEvent) => {
 		isDragging = true;
-		dragStartX = e.clientX;
-		dragStartY = e.clientY;
-		imageStartX = imageX;
-		imageStartY = imageY;
+		startX = e.clientX - lastX;
+		startY = e.clientY - lastY;
 	};
 
-	// Mouvement de glissement (drag)
 	const handleDragMove = (e: MouseEvent) => {
 		if (isDragging) {
-			imageX = imageStartX + (e.clientX - dragStartX);
-			imageY = imageStartY + (e.clientY - dragStartY);
+			lastX = e.clientX - startX;
+			lastY = e.clientY - startY;
+			imageX = lastX;
+			imageY = lastY;
 		}
 	};
 
-	// Fin du glissement (drag)
 	const handleDragEnd = () => {
 		isDragging = false;
 	};
 
-	// Gestion du zoom (avec la molette)
 	const handleWheelZoom = (e: WheelEvent) => {
 		e.preventDefault();
 
-		// Position de la souris relative à l'image
-		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		const rect = container.getBoundingClientRect();
 		const mouseX = e.clientX - rect.left;
 		const mouseY = e.clientY - rect.top;
 
-		// Calcul du facteur de zoom
 		const zoomDirection = e.deltaY < 0 ? 1 : -1;
-		const newScale = Math.min(Math.max(scale + zoomStep * zoomDirection, minScale), maxScale);
+		const prevScale = scale;
+		scale = Math.min(Math.max(scale + zoomStep * zoomDirection, minScale), maxScale);
 
-		// Ajustement des positions pour centrer le zoom sur la souris
-		const scaleRatio = newScale / scale;
-		imageX -= (mouseX - imageX) * (scaleRatio - 1);
-		imageY -= (mouseY - imageY) * (scaleRatio - 1);
+		const scaleRatio = scale / prevScale;
+		const newX = mouseX - (mouseX - imageX) * scaleRatio;
+		const newY = mouseY - (mouseY - imageY) * scaleRatio;
 
-		scale = newScale;
+		imageX = newX;
+		imageY = newY;
+		lastX = newX;
+		lastY = newY;
 	};
 
-	// Gestion des boutons de zoom
 	const zoomIn = () => {
-		const newScale = Math.min(scale + zoomStep, maxScale);
-		scale = newScale;
+		const prevScale = scale;
+		scale = Math.min(scale + zoomStep, maxScale);
+
+		const scaleRatio = scale / prevScale;
+		const centerX = container.clientWidth / 2;
+		const centerY = container.clientHeight / 2;
+
+		imageX = centerX - (centerX - imageX) * scaleRatio;
+		imageY = centerY - (centerY - imageY) * scaleRatio;
+		lastX = imageX;
+		lastY = imageY;
 	};
 
 	const zoomOut = () => {
-		const newScale = Math.max(scale - zoomStep, minScale);
-		scale = newScale;
+		const prevScale = scale;
+		scale = Math.max(scale - zoomStep, minScale);
+
+		const scaleRatio = scale / prevScale;
+		const centerX = container.clientWidth / 2;
+		const centerY = container.clientHeight / 2;
+
+		imageX = centerX - (centerX - imageX) * scaleRatio;
+		imageY = centerY - (centerY - imageY) * scaleRatio;
+		lastX = imageX;
+		lastY = imageY;
 	};
 </script>
 
-<!-- Conteneur interactif -->
 <div
+	bind:this={container}
+	class="relative h-[calc(100vh-8rem)] w-full overflow-hidden"
 	role="button"
 	tabindex="0"
-	aria-label="Image interactive avec zoom et déplacement"
+	aria-label="Vue éclatée interactive"
 	on:mousedown={handleDragStart}
 	on:mousemove={handleDragMove}
 	on:mouseup={handleDragEnd}
 	on:mouseleave={handleDragEnd}
 	on:wheel={handleWheelZoom}
-	style="overflow: hidden; width: 100%; height: 100vh; position: relative; cursor: grab;"
 >
-	<!-- Image zoomable et déplaçable -->
-	<img
-		src="/exploded_view_1.png"
-		alt="Vue éclatée"
-		draggable="false"
-		style="position: absolute; left: {imageX}px; top: {imageY}px; transform: scale({scale}); transform-origin: top left;"
-	/>
+	<div
+		class="absolute"
+		style="transform: translate({imageX}px, {imageY}px) scale({scale}); transform-origin: 0 0;"
+	>
+		<img src="/exploded_view_1.png" alt="Vue éclatée" class="block select-none" draggable="false" />
 
-	<!-- Numéros annotés -->
-	{#each partsData as part}
-		<div
-			class="absolute"
-			style="top: calc({part.y}px * {scale} + {imageY}px); left: calc({part.x}px * {scale} + {imageX}px); width: 60px; height: 30px; transform: translate(-50%, -50%);"
-		>
-			<div class="h-full w-full rounded border-4 border-blue-500 opacity-40"></div>
-		</div>
-	{/each}
+		{#each partsData as part}
+			<div
+				class="group absolute"
+				style="top: {part.y}px; left: {part.x}px; width: 60px; height: 30px; transform: translate(-50%, -50%);"
+			>
+				<div class="h-full w-full rounded border-4 border-blue-500 opacity-40"></div>
+				<!-- Tooltip -->
+				<div
+					class="absolute bottom-full left-1/2 mb-2 hidden w-max -translate-x-1/2 transform whitespace-nowrap rounded bg-black px-2 py-1 text-xs text-white shadow-lg group-hover:block"
+				>
+					{part.name}
+					<br />
+					Code Fournisseur : {part.supplierCode}
+				</div>
+			</div>
+		{/each}
+	</div>
 </div>
 
-<!-- Boutons de zoom -->
 <div
 	class="fixed bottom-4 left-1/2 flex -translate-x-1/2 transform items-center gap-4 rounded-lg bg-gray-700 bg-opacity-80 p-2 text-white"
 >

@@ -2,9 +2,10 @@
 	import { onMount } from 'svelte';
 	import MoveImage from '$lib/components/MoveImage.svelte';
 	import { partsData } from '$lib/data/partsData';
+	import { attachClickListenerToImage } from '$lib/utils/coordinates';
 
 	onMount(() => {
-		console.log('Attach listener to image for coordinates');
+		attachClickListenerToImage('img');
 	});
 </script>
 
