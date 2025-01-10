@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Part } from '$lib/data/partsData';
-	import { Tooltip } from 'flowbite-svelte';
 
 	export let partsData: Part[];
+	export let onPartClick: (part: Part) => void;
 
 	let container: HTMLElement;
 	let imageX = 0;
@@ -17,12 +17,34 @@
 	let lastX = 0;
 	let lastY = 0;
 
+	// Calculer les décalages initiaux pour centrer l'image
+	const initializeImagePosition = () => {
+		if (container) {
+			const rect = container.getBoundingClientRect();
+			const imageWidth = 800; // Remplacez par la largeur réelle de votre image
+			const imageHeight = 600; // Remplacez par la hauteur réelle de votre image
+			imageX = (rect.width - imageWidth) / 2;
+			imageY = (rect.height - imageHeight) / 2;
+			lastX = imageX;
+			lastY = imageY;
+		}
+	};
+
+	// Gestion du clic sur une pièce
+	const handlePartClick = (part: Part): void => {
+		if (onPartClick) {
+			onPartClick(part);
+		}
+	};
+
+	// Début du déplacement (drag)
 	const handleDragStart = (e: MouseEvent) => {
 		isDragging = true;
 		startX = e.clientX - lastX;
 		startY = e.clientY - lastY;
 	};
 
+	// Déplacement en cours (drag)
 	const handleDragMove = (e: MouseEvent) => {
 		if (isDragging) {
 			lastX = e.clientX - startX;
@@ -32,10 +54,12 @@
 		}
 	};
 
+	// Fin du déplacement (drag)
 	const handleDragEnd = () => {
 		isDragging = false;
 	};
 
+	// Gestion du zoom à la molette
 	const handleWheelZoom = (e: WheelEvent) => {
 		e.preventDefault();
 
@@ -57,6 +81,7 @@
 		lastY = newY;
 	};
 
+	// Zoom avant
 	const zoomIn = () => {
 		const prevScale = scale;
 		scale = Math.min(scale + zoomStep, maxScale);
@@ -71,6 +96,7 @@
 		lastY = imageY;
 	};
 
+	// Zoom arrière
 	const zoomOut = () => {
 		const prevScale = scale;
 		scale = Math.max(scale - zoomStep, minScale);
@@ -84,6 +110,12 @@
 		lastX = imageX;
 		lastY = imageY;
 	};
+
+	// Initialisation des coordonnées au montage
+	import { onMount } from 'svelte';
+	onMount(() => {
+		initializeImagePosition();
+	});
 </script>
 
 <div
@@ -102,12 +134,23 @@
 		class="absolute"
 		style="transform: translate({imageX}px, {imageY}px) scale({scale}); transform-origin: 0 0;"
 	>
-		<img src="/exploded_view_1.png" alt="Vue éclatée" class="block select-none" draggable="false" />
+		<img
+			src="/exploded_view_1.png"
+			alt="Vue éclatée"
+			class="block max-h-full select-none"
+			draggable="false"
+		/>
 
+		<!-- Boucle pour afficher les rectangles bleus -->
 		{#each partsData as part}
 			<div
 				class="group absolute"
+				role="button"
+				tabindex="0"
+				aria-label="Click Sidebar"
 				style="top: {part.y}px; left: {part.x}px; width: 60px; height: 30px; transform: translate(-50%, -50%);"
+				on:click={() => handlePartClick(part)}
+				on:keydown={() => handlePartClick(part)}
 			>
 				<div class="h-full w-full rounded border-4 border-blue-500 opacity-40"></div>
 				<!-- Tooltip -->

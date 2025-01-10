@@ -2,6 +2,7 @@
 	import type { Part } from '$lib/data/partsData';
 
 	export let partsData: Part[];
+	export let onPartClick: (part: Part) => void;
 
 	let container: HTMLElement;
 	let imageX = 0;
@@ -15,6 +16,12 @@
 	let startY = 0;
 	let lastX = 0;
 	let lastY = 0;
+
+	const handlePartClick = (part: Part): void => {
+		if (onPartClick) {
+			onPartClick(part);
+		}
+	};
 
 	const handleDragStart = (e: MouseEvent) => {
 		isDragging = true;
@@ -98,24 +105,34 @@
 	on:wheel={handleWheelZoom}
 >
 	<div
-		class="absolute"
+		class="absolute inset-0 flex items-center justify-center"
 		style="transform: translate({imageX}px, {imageY}px) scale({scale}); transform-origin: 0 0;"
 	>
-		<img src="/exploded_view_1.png" alt="Vue éclatée" class="block select-none" draggable="false" />
+		<img
+			src="/exploded_view_1.png"
+			alt="Vue éclatée"
+			class="block max-h-full select-none"
+			draggable="false"
+		/>
 
 		{#each partsData as part}
 			<div
 				class="group absolute"
+				role="button"
+				tabindex="0"
+				aria-label="Click Sidebar"
 				style="top: {part.y}px; left: {part.x}px; width: 60px; height: 30px; transform: translate(-50%, -50%);"
+				on:click={() => handlePartClick(part)}
+				on:keydown={() => handlePartClick(part)}
 			>
 				<div class="h-full w-full rounded border-4 border-blue-500 opacity-40"></div>
 				<!-- Tooltip -->
 				<div
 					class="absolute bottom-full left-1/2 mb-2 hidden w-max -translate-x-1/2 transform whitespace-nowrap rounded bg-black px-2 py-1 text-xs text-white shadow-lg group-hover:block"
 				>
-					{part.name}
+					<strong>{part.name}</strong>
 					<br />
-					Code Fournisseur : {part.supplierCode}
+					Code Fournisseur : <strong>{part.supplierCode}</strong>
 				</div>
 			</div>
 		{/each}
